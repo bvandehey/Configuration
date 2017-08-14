@@ -1,0 +1,110 @@
+﻿using System;
+using System.Linq.Expressions;
+using Alkami.Utilities.ArgumentValidation.Exceptions;
+
+namespace Alkami.Utilities.ArgumentValidation
+{
+    /// <summary>
+    /// Methods for checking a generic instance of T
+    /// </summary>
+    /// <typeparam name="T"></typeparam>
+    public class GenericArgumentExpression<T>
+    {
+        protected readonly Expression<Func<T>> Target;
+
+        public GenericArgumentExpression(Expression<Func<T>> target)
+        {
+            Target = target;
+        }
+
+        protected T TargetValue => Target.Compile()();
+
+        protected string FieldName
+        {
+            get
+            {
+                var memberExpression = Target.Body as MemberExpression;
+                if (memberExpression != null)
+                {
+                    return memberExpression.Member.Name;
+                }
+
+                var constantExpression = Target.Body as ConstantExpression;
+                if (constantExpression != null)
+                {
+                    return $"Constant \"{constantExpression.Value}\"";
+                }
+
+                throw new ArgumentException($"Cannot get field name for expression '{Target}', the target body is {Target.Body.GetType()}");
+            }
+        }
+
+        /// <summary>
+        /// Check that the target value is not null.
+        /// Throws an ArgumentNullException if the target value is null.
+        /// </summary>
+        /// <param name="message">An optional message that overrides the automatically generated one if the check fails</param>
+        public void IsNotNull(string message = null)
+        {
+            if (object.ReferenceEquals(TargetValue, null))
+            {
+                throw new ArgumentNullException(FieldName, message);
+            }
+        }
+
+        /// <summary>
+        /// Check that the target value is equal to the expected value (using .Equals())
+        /// Throws an InvariantsShouldBeEqualToException if the target value does not equal the expected value.
+        /// </summary>
+        /// <param name="expected">The expected value</param>
+        /// <param name="message">An optional message that overrides the automatically generated one if the check fails</param>
+        public void IsEqualTo(T expected, string message = null)
+        {
+            if (!TargetValue.Equals(expected))
+            {
+                throw new ArgumentShouldBeEqualException<T>(message, FieldName, expected, TargetValue);
+            }
+        }
+
+        /// <summary>
+        /// Check that the target value is not equal to the expected value (using .Equals())
+        /// Throws an InvariantsShouldBeEqualToException if the target value does equals the expected value.
+        /// </summary>
+        /// <param name="expected">The expected value</param>
+        /// <param name="message">An optional message that overrides the automatically generated one if the check fails</param>
+        public void IsNotEqualTo(T expected, string message = null)
+        {
+            if (TargetValue.Equals(expected))
+            {
+                throw new ArgumentShouldNotBeEqualException<T>(message, FieldName, expected, TargetValue);
+            }
+        }
+/*
+        /// <summary>
+        /// Check that the target value is one of the expected values (using expected.Contains()).
+        /// Throws an InvariantsShouldBeEqualToException if the target value is not one of the expected values.
+        /// </summary>
+        /// <param name="expected">The expected values</param>
+        public void IsOneOf(params T[] expected)
+        {
+            if (!expected.Contains(TargetValue))
+            {
+                throw new InvariantShouldBeOneOfException<T>(FieldName, TargetValue, expected);
+            }
+        }
+
+        /// <summary>
+        /// Check that the target value is not one of the expected values (using expected.Contains()).
+        /// Throws an InvariantsShouldNotBeEqualToException if the target value is one of the expected values.
+        /// </summary>
+        /// <param name="expected">The expected values</param>
+        public void IsNotOneOf(params T[] expected)
+        {
+            if (expected.Contains(TargetValue))
+            {
+                throw new InvariantShouldNotBeOneOfException<T>(FieldName, TargetValue, expected);
+            }
+        }
+*/
+    }
+}
